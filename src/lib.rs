@@ -1,4 +1,5 @@
 pub mod build;
+pub mod modrinth;
 pub mod util;
 
 mod config;

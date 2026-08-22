@@ -1,8 +1,7 @@
 use sha2::{Digest, Sha256};
 use std::error::Error;
-use std::fmt::Debug;
 use std::fs::File;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use std::{
     io,
     io::{BufReader, Read, Write, copy},

@@ -39,8 +39,18 @@ impl PaperstrapConfig {
     }
 
     fn download_paper(&self) -> Result<(), Box<dyn Error>> {
-        println!("downloading paper...");
-        util::download(&self.get_url(), &self.get_paper_jar_path())
+        println!("downloading paper... ");
+        _ = io::stdout().flush();
+        match util::download(&self.get_url(), &self.get_paper_jar_path()) {
+            Ok(_) => {
+                println!("ok");
+                Ok(())
+            }
+            Err(e) => {
+                eprintln!("{:?}", e);
+                Err(e)
+            }
+        }
     }
 
     pub fn download_paper_verify(&self) -> Result<(), String> {
@@ -98,12 +108,7 @@ impl PaperstrapConfig {
             "Do you agree to the minecraft EULA? https://aka.ms/MinecraftEULA [Y] ",
         )
         .to_lowercase();
-        let agreed = match ans.as_str() {
-            "" => true,
-            "y" => true,
-            "yes" => true,
-            _ => false,
-        };
+        let agreed = matches!(ans.as_str(), "" | "y" | "yes");
         assert!(agreed, "fuh naw");
 
         _ = fs::write(&path, "eula=true");

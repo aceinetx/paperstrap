@@ -1,7 +1,9 @@
 use crate::PaperstrapConfig;
 use nickel_lang::Context;
+use std::io;
+use std::io::Write;
 
-pub fn read_config() -> String {
+pub fn read_config() -> Option<PaperstrapConfig> {
     let source = r#"
 {
     build_path = "build/",
@@ -14,36 +16,47 @@ pub fn read_config() -> String {
     paper_global_config = {},
 }
     "#;
-    String::from(source)
-}
 
-pub fn build() {
     let mut context = Context::new();
 
-    let source = read_config();
+    print!("evaluating... ");
+    _ = io::stdout().flush();
 
-    let value = match context.eval_deep(&source) {
+    let value = match context.eval_deep(source) {
         Ok(v) => v,
-        Err(e) => {
-            println!("{:#?}", e);
-            return;
+        Err(_) => {
+            println!("fail");
+            return None;
         }
     };
+    println!("ok");
 
+    print!("converting to json... ");
     let json_str = match context.expr_to_json(&value) {
         Ok(v) => v,
         Err(e) => {
             println!("{:#?}", e);
-            return;
+            return None;
         }
     };
+    println!("ok");
 
+    print!("deserializing... ");
     let cfg: PaperstrapConfig = match serde_json::from_str(&json_str) {
         Ok(v) => v,
         Err(e) => {
             println!("{}", e);
-            return;
+            return None;
         }
+    };
+    println!("ok");
+
+    Some(cfg)
+}
+
+pub fn build() {
+    let Some(cfg) = read_config() else {
+        return;
     };
 
     cfg.initialize().unwrap();
