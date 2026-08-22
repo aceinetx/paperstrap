@@ -1,9 +1,12 @@
 use sha2::{Digest, Sha256};
 use std::error::Error;
+use std::fmt::Debug;
 use std::fs::File;
-use std::io::copy;
-use std::io::{BufReader, Read};
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::{
+    io,
+    io::{BufReader, Read, Write, copy},
+};
 
 pub fn download(url: &str, destination: &Path) -> Result<(), Box<dyn Error>> {
     let mut response = reqwest::blocking::get(url)?;
@@ -38,4 +41,16 @@ pub fn hash_file_sha256<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn Error
 
     // Convert to hexadecimal string representation
     Ok(hex::encode(result))
+}
+
+pub fn get_input(prompt: &str) -> String {
+    print!("{}", prompt);
+    _ = io::stdout().flush();
+
+    let mut input = String::new();
+    match io::stdin().read_line(&mut input) {
+        Ok(_goes_into_input_above) => {}
+        Err(_no_updates_is_fine) => {}
+    }
+    input.trim().to_string()
 }
