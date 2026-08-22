@@ -1,14 +1,14 @@
 use serde::Deserialize;
 use std::fmt::Display;
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 #[serde(default)]
 pub struct PaperGlobalConfigUnsupportedSettings {
     allow_headless_pistons: bool,
     allow_piston_duplication: bool,
 }
 
-#[derive(Deserialize, Default)]
+#[derive(Deserialize, Default, Debug)]
 #[serde(default)]
 pub struct PaperGlobalConfig {
     unsupported_settings: PaperGlobalConfigUnsupportedSettings,

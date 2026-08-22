@@ -17,9 +17,8 @@ pub struct VersionMeta {
 
 pub fn fetch_plugin(name: &str) -> Result<Vec<VersionMeta>, String> {
     let url = format!("https://api.modrinth.com/v2/project/{name}/version");
-    //let response = reqwest::blocking::get(url).map_err(|e| e.to_string())?;
-    //let text = response.text().map_err(|e| e.to_string())?;
-    let text = String::from_utf8_lossy(include_bytes!("../temp"));
+    let response = reqwest::blocking::get(url).map_err(|e| e.to_string())?;
+    let text = response.text().map_err(|e| e.to_string())?;
 
     let meta: Vec<VersionMeta> = serde_json::from_str(&text).map_err(|e| e.to_string())?;
 

@@ -1,12 +1,14 @@
-use crate::{PaperGlobalConfig, ServerProperties, util};
+use crate::{PaperGlobalConfig, ServerProperties, modrinth, util};
+use nickel_lang::Context;
 use serde::Deserialize;
 use std::collections::HashMap;
 use std::error::Error;
+use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
-use std::{fs, io, io::Write};
+use std::path::{Path, PathBuf};
+use std::{io, io::Write};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct PaperstrapConfig {
     pub build_path: PathBuf,
     pub version: String,
@@ -14,9 +16,54 @@ pub struct PaperstrapConfig {
     pub hash: String,
     pub server_properties: ServerProperties,
     pub paper_global_config: PaperGlobalConfig,
+    pub plugins: HashMap<String, HashMap<String, String>>,
 }
 
 impl PaperstrapConfig {
+    pub fn compile_config(config: &str) -> Option<PaperstrapConfig> {
+        let std = include_str!("../assets/std.ncl").to_owned();
+
+        let source = std + " in " + config;
+
+        let mut context = Context::new();
+
+        print!("evaluating... ");
+        _ = io::stdout().flush();
+
+        let value = match context.eval_deep(&source) {
+            Ok(v) => v,
+            Err(_) => {
+                println!("fail");
+                return None;
+            }
+        };
+        println!("ok");
+
+        print!("converting to json... ");
+        let json_str = match context.expr_to_json(&value) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{:#?}", e);
+                return None;
+            }
+        };
+        println!("ok");
+
+        print!("deserializing... ");
+        let cfg: PaperstrapConfig = match serde_json::from_str(&json_str) {
+            Ok(v) => v,
+            Err(e) => {
+                println!("{}", e);
+                return None;
+            }
+        };
+        println!("ok");
+
+        dbg!(&cfg);
+
+        Some(cfg)
+    }
+
     pub fn initialize(&self) -> io::Result<()> {
         if let Err(e) = fs::create_dir(&self.build_path)
             && e.kind() != io::ErrorKind::AlreadyExists
@@ -39,18 +86,7 @@ impl PaperstrapConfig {
     }
 
     fn download_paper(&self) -> Result<(), Box<dyn Error>> {
-        println!("downloading paper... ");
-        _ = io::stdout().flush();
-        match util::download(&self.get_url(), &self.get_paper_jar_path()) {
-            Ok(_) => {
-                println!("ok");
-                Ok(())
-            }
-            Err(e) => {
-                eprintln!("{:?}", e);
-                Err(e)
-            }
-        }
+        util::download(&self.get_url(), &self.get_paper_jar_path())
     }
 
     pub fn download_paper_verify(&self) -> Result<(), String> {
@@ -169,5 +205,103 @@ impl PaperstrapConfig {
 
     pub fn symlink_plugins(&self) {
         self.symlink_dir("plugins");
+    }
+
+    pub fn build(&self) {
+        self.initialize().unwrap();
+        self.download_paper_verify().unwrap();
+        self.add_startup_scripts();
+        self.add_eula();
+        self.add_server_properties();
+        self.add_paper_global_config();
+        self.symlink_world();
+        self.symlink_plugins();
+    }
+
+    fn get_plugin_path_from_name(&self, name: &str) -> PathBuf {
+        self.build_path.join("plugins").join(format!("{name}.jar"))
+    }
+
+    fn download_modrinth_plugin(
+        &self,
+        name: &str,
+        config: &HashMap<String, String>,
+    ) -> Result<(), String> {
+        let version = config.get("version");
+        let game_version = &config["game_version"];
+        let version_type = &config["channel"];
+
+        let versions = modrinth::fetch_plugin(name)?;
+        let meta = match modrinth::find_matching_version(
+            &versions,
+            version.as_ref().map(|v| v.as_str()),
+            &game_version,
+            &version_type,
+        ) {
+            Ok(v) => v,
+            Err(e) => {
+                return Err(format!("error while fetching plugin {name}: {e}"));
+            }
+        };
+
+        let file = &meta.files[0];
+        let path = self.get_plugin_path_from_name(name);
+        if let Err(e) = util::download(&file.url, &path) {
+            return Err(format!("error while downloading plugin {name}: {e}"));
+        }
+
+        Ok(())
+    }
+
+    fn download_local_plugin(
+        &self,
+        name: &str,
+        config: &HashMap<String, String>,
+    ) -> Result<(), String> {
+        let local_path = &config["path"];
+        let path = self.get_plugin_path_from_name(name);
+
+        _ = fs::remove_file(&path);
+
+        symlink::symlink_dir(&local_path, &path).map_err(|e| e.to_string())
+    }
+
+    fn download_url_plugin(
+        &self,
+        name: &str,
+        config: &HashMap<String, String>,
+    ) -> Result<(), String> {
+        let url = &config["url"];
+        let path = self.get_plugin_path_from_name(name);
+
+        util::download(url, &path).map_err(|e| e.to_string())
+    }
+
+    pub fn download_plugins(&self) -> Result<(), String> {
+        for (name, config) in self.plugins.iter() {
+            let source = match config.get("source") {
+                Some(v) => v,
+                None => {
+                    return Err("plugin config is missing `source` attribute".into());
+                }
+            };
+
+            println!("installing plugin {name}...");
+            match source.as_str() {
+                "modrinth" => {
+                    self.download_modrinth_plugin(name, &config)?;
+                }
+                "local" => {
+                    self.download_local_plugin(name, &config)?;
+                }
+                "url" => {
+                    self.download_url_plugin(name, &config)?;
+                }
+                other => {
+                    return Err(format!("unknown plugin source {other}"));
+                }
+            }
+        }
+        Ok(())
     }
 }

@@ -8,6 +8,8 @@ use std::{
 };
 
 pub fn download(url: &str, destination: &Path) -> Result<(), Box<dyn Error>> {
+    println!("downloading {} -> {}...", url, destination.display());
+
     let mut response = reqwest::blocking::get(url)?;
 
     let mut dest_file = File::create(destination)?;
