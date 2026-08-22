@@ -5,7 +5,7 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use std::{io, io::Write};
 
 #[derive(Deserialize, Debug)]
@@ -235,8 +235,8 @@ impl PaperstrapConfig {
         let meta = match modrinth::find_matching_version(
             &versions,
             version.as_ref().map(|v| v.as_str()),
-            &game_version,
-            &version_type,
+            game_version,
+            version_type,
         ) {
             Ok(v) => v,
             Err(e) => {
@@ -263,7 +263,7 @@ impl PaperstrapConfig {
 
         _ = fs::remove_file(&path);
 
-        symlink::symlink_dir(&local_path, &path).map_err(|e| e.to_string())
+        symlink::symlink_dir(local_path, &path).map_err(|e| e.to_string())
     }
 
     fn download_url_plugin(
@@ -289,13 +289,13 @@ impl PaperstrapConfig {
             println!("installing plugin {name}...");
             match source.as_str() {
                 "modrinth" => {
-                    self.download_modrinth_plugin(name, &config)?;
+                    self.download_modrinth_plugin(name, config)?;
                 }
                 "local" => {
-                    self.download_local_plugin(name, &config)?;
+                    self.download_local_plugin(name, config)?;
                 }
                 "url" => {
-                    self.download_url_plugin(name, &config)?;
+                    self.download_url_plugin(name, config)?;
                 }
                 other => {
                     return Err(format!("unknown plugin source {other}"));

@@ -58,7 +58,9 @@ pub fn find_matching_version<'a>(
         }
 
         // check for loader
-        if !meta.loaders.contains(&String::from("paper")) {
+        if !meta.loaders.contains(&String::from("paper"))
+            && !meta.loaders.contains(&String::from("bukkit"))
+        {
             continue;
         }
 
