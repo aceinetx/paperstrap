@@ -9,8 +9,15 @@ fn init_project() -> Result<(), io::Error> {
         assert!(confirmed);
     }
 
-    fs::write("paperstrap.ncl", include_bytes!("../assets/default.ncl"))?;
+    fs::write(
+        "paperstrap.ncl",
+        include_bytes!("../assets/project-paperstrap.ncl"),
+    )?;
     fs::write(".gitignore", include_bytes!("../assets/project-gitignore"))?;
+    fs::write(
+        ".editorconfig",
+        include_bytes!("../assets/project-editorconfig"),
+    )?;
 
     Ok(())
 }

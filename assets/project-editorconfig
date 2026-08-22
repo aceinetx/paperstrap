@@ -3,10 +3,6 @@ root = true
 [*]
 trim_trailing_whitespace = true
 
-[*.nix]
-indent_style = space
-indent_size = 2
-
 [*.ncl]
 indent_style=space
 indent_size=2
