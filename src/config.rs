@@ -17,6 +17,9 @@ pub struct PaperstrapConfig {
     pub server_properties: ServerProperties,
     pub paper_global_config: PaperGlobalConfig,
     pub plugins: HashMap<String, HashMap<String, String>>,
+
+    #[serde(default)]
+    pub plugins_configs: HashMap<String, HashMap<PathBuf, String>>,
 }
 
 impl PaperstrapConfig {
@@ -58,8 +61,6 @@ impl PaperstrapConfig {
             }
         };
         println!("ok");
-
-        dbg!(&cfg);
 
         Some(cfg)
     }
@@ -141,7 +142,7 @@ impl PaperstrapConfig {
         }
 
         let ans = util::get_input(
-            "Do you agree to the minecraft EULA? https://aka.ms/MinecraftEULA [Y] ",
+            "Do you agree to the minecraft EULA? https://aka.ms/MinecraftEULA [Y/n] ",
         )
         .to_lowercase();
         let agreed = matches!(ans.as_str(), "" | "y" | "yes");
@@ -183,6 +184,7 @@ impl PaperstrapConfig {
         print!("symlinking {}... ", name);
         _ = io::stdout().flush();
 
+        _ = fs::create_dir(&actual_path);
         if !fs::exists(&actual_path).unwrap() {
             println!("{} doesn't exist", name);
             return;
@@ -205,17 +207,6 @@ impl PaperstrapConfig {
 
     pub fn symlink_plugins(&self) {
         self.symlink_dir("plugins");
-    }
-
-    pub fn build(&self) {
-        self.initialize().unwrap();
-        self.download_paper_verify().unwrap();
-        self.add_startup_scripts();
-        self.add_eula();
-        self.add_server_properties();
-        self.add_paper_global_config();
-        self.symlink_world();
-        self.symlink_plugins();
     }
 
     fn get_plugin_path_from_name(&self, name: &str) -> PathBuf {
@@ -275,6 +266,34 @@ impl PaperstrapConfig {
         let path = self.get_plugin_path_from_name(name);
 
         util::download(url, &path).map_err(|e| e.to_string())
+    }
+
+    pub fn add_plugins_configs(&self) -> Result<(), String> {
+        for (plugin, files) in self.plugins_configs.iter() {
+            println!("adding config files for {plugin}...");
+            let dir_path = self.build_path.join("plugins").join(plugin);
+            _ = fs::create_dir(&dir_path);
+            for (filename, contents) in files.iter() {
+                println!("\t{}...", filename.display());
+                let path = dir_path.join(filename);
+                fs::write(path, contents).map_err(|e| e.to_string())?;
+            }
+        }
+
+        Ok(())
+    }
+
+    pub fn build(&self) -> Result<(), String> {
+        self.initialize().map_err(|e| e.to_string())?;
+        self.download_paper_verify()?;
+        self.add_startup_scripts();
+        self.add_eula();
+        self.add_server_properties();
+        self.add_paper_global_config();
+        self.symlink_world();
+        self.symlink_plugins();
+        self.add_plugins_configs()?;
+        Ok(())
     }
 
     pub fn download_plugins(&self) -> Result<(), String> {

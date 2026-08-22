@@ -1,7 +1,7 @@
 use sha2::{Digest, Sha256};
 use std::error::Error;
-use std::fs::File;
 use std::path::Path;
+use std::{fs, fs::File};
 use std::{
     io,
     io::{BufReader, Read, Write, copy},
@@ -54,4 +54,17 @@ pub fn get_input(prompt: &str) -> String {
         Err(_no_updates_is_fine) => {}
     }
     input.trim().to_string()
+}
+
+pub fn is_dir_empty_excluding_dotfiles(path: impl AsRef<Path>) -> io::Result<bool> {
+    for entry in fs::read_dir(path)? {
+        let entry = entry?;
+        let name = entry.file_name();
+
+        if !name.to_string_lossy().starts_with('.') {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
 }

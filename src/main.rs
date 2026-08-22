@@ -1,11 +1,16 @@
 use std::{fs, io};
 
-use paperstrap::PaperstrapConfig;
+use paperstrap::{PaperstrapConfig, util};
 
 fn init_project() -> Result<(), io::Error> {
+    if !util::is_dir_empty_excluding_dotfiles(std::env::current_dir()?)? {
+        let ans = util::get_input("The current directory is not empty, are you sure you want to create a project here? [Y/n] ").to_lowercase();
+        let confirmed = matches!(ans.as_str(), "" | "y" | "yes");
+        assert!(confirmed);
+    }
+
     fs::write("paperstrap.ncl", include_bytes!("../assets/default.ncl"))?;
-    fs::create_dir("plugins")?;
-    fs::create_dir("world")?;
+    fs::write(".gitignore", include_bytes!("../assets/project-gitignore"))?;
 
     Ok(())
 }
@@ -49,8 +54,18 @@ fn main() {
     };
 
     match action {
-        Action::Build => read_config().unwrap().build(),
-        Action::DownloadPlugins => read_config().unwrap().download_plugins().unwrap(),
+        Action::Build => {
+            match read_config().unwrap().build() {
+                Ok(_) => println!("server built in build/"),
+                Err(e) => println!("error building the server: {}", e),
+            };
+        }
+        Action::DownloadPlugins => {
+            match read_config().unwrap().download_plugins() {
+                Ok(_) => println!("all plugins downloaded"),
+                Err(e) => println!("error downloading plugins: {}", e),
+            };
+        }
         Action::Init => match init_project() {
             Ok(_) => println!("initialized a project in the current directory"),
             Err(e) => println!("failed to initialize a project: {}", e),
