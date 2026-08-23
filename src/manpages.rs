@@ -119,4 +119,30 @@ plugin.url:
     + path: String                         plugin url
 "#,
     },
+    Manpage {
+        name: "attr-symlink_files",
+        description: "symlink_files optional config attribute",
+        text: r#"(Record)
+add custom file symlinks
+
+files provided by this record would be symlinked relative to the build directory:
+{
+    "paperstrap.ncl" = "symlink_paperstrap.ncl",
+}
+would create a symlink "build/symlink_paperstrap.ncl" that points to "paperstrap.ncl"
+"#,
+    },
+    Manpage {
+        name: "attr-symlink_dirs",
+        description: "symlink_dirs optional config attribute",
+        text: r#"(Record)
+add custom directory symlinks
+
+directories provided by this record would be symlinked relative to the build directory:
+{
+    "a" = "b",
+}
+would create a symlink "build/b" that points to "a"
+"#,
+    },
 ];

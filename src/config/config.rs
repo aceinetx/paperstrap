@@ -48,6 +48,12 @@ pub struct PaperstrapConfig {
 
     #[serde(default)]
     pub world_source: Option<String>,
+
+    #[serde(default)]
+    pub symlink_files: HashMap<PathBuf, PathBuf>,
+
+    #[serde(default)]
+    pub symlink_dirs: HashMap<PathBuf, PathBuf>,
 }
 
 impl PaperstrapConfig {
@@ -157,6 +163,7 @@ impl PaperstrapConfig {
     }
 
     fn symlink_dir(&self, actual_path: &str, name: &str) -> io::Result<()> {
+        let actual_path = std::path::absolute(actual_path)?;
         let symlink_path = self.build_path.join(name);
 
         print!("symlinking {}... ", name);
@@ -210,6 +217,43 @@ impl PaperstrapConfig {
         Ok(())
     }
 
+    fn add_custom_symlinks(&self) -> io::Result<()> {
+        println!("adding custom symlinks...");
+        for (from, to) in self.symlink_files.iter() {
+            print!("\t- {} -> {}... ", from.display(), to.display());
+
+            let from = std::path::absolute(from)?;
+            let to = std::path::absolute(self.build_path.join(to))?;
+
+            if !to.starts_with(&self.build_path) {
+                continue;
+            }
+
+            match symlink::symlink_file(from, to) {
+                Ok(_) => println!("ok"),
+                Err(e) => println!("{}", e),
+            }
+        }
+
+        for (from, to) in self.symlink_dirs.iter() {
+            print!("\td {} -> {}... ", from.display(), to.display());
+
+            let from = std::path::absolute(from)?;
+            let to = std::path::absolute(self.build_path.join(to))?;
+
+            if !to.starts_with(&self.build_path) {
+                continue;
+            }
+
+            match symlink::symlink_dir(from, to) {
+                Ok(_) => println!("ok"),
+                Err(e) => println!("{}", e),
+            }
+        }
+
+        Ok(())
+    }
+
     pub fn build(&self) -> Result<(), BuildError> {
         self.initialize()?;
         self.download_paper()?;
@@ -220,6 +264,7 @@ impl PaperstrapConfig {
         self.symlink_world()?;
         self.symlink_plugins()?;
         self.add_plugins_configs()?;
+        self.add_custom_symlinks()?;
         Ok(())
     }
 }
