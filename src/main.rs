@@ -69,7 +69,13 @@ fn man(name: &str) {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Arguments::from_env();
-    let command: String = args.free_from_str()?;
+    let command: String = match args.free_from_str() {
+        Ok(v) => v,
+        Err(e) => {
+            help();
+            return Err(e.into());
+        }
+    };
 
     match command.as_str() {
         "init" => {
