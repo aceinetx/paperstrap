@@ -78,6 +78,14 @@ Refer to record-plugin manpage for documentation on `plugin.url`
 "#,
     },
     Manpage {
+        name: "attr-world_source",
+        description: "world_source optional config attribute",
+        text: r#"(String)
+set the directory path for the world
+default value is "world"
+"#,
+    },
+    Manpage {
         name: "record-plugin",
         description: "plugin helpers",
         text: r#"(Record)
@@ -88,11 +96,11 @@ plugin.modrinth:
   downloads a plugin from modrinth according to `config` and puts it into plugins/
 
   args:
-    + config: Record              plugin config
+    + config: Record                       plugin config
       + fields:
-        + version: String         set a specific plugin version
-        + game_version: String    set a specific game version
-        + channel: String         set a download channel, valid values are: release, beta, alpha
+        + optional version: String         set a specific plugin version
+        + game_version: String             set a specific game version
+        + channel: String                  set a download channel, valid values are: release, beta, alpha
 
 plugin.local:
   generate a local plugin reference
@@ -100,7 +108,7 @@ plugin.local:
   adds a symlink to `path` in the plugins/ directory
 
   args:
-    + path: String                plugin jar path
+    + path: String                         plugin jar path
 
 plugin.url:
   generate a url plugin reference
@@ -108,7 +116,7 @@ plugin.url:
   downloads a plugin from `url` and puts it into plugins/
 
   args:
-    + path: String                plugin url
+    + path: String                         plugin url
 "#,
     },
 ];

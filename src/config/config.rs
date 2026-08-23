@@ -45,6 +45,9 @@ pub struct PaperstrapConfig {
 
     #[serde(default)]
     pub plugins_configs: HashMap<String, HashMap<PathBuf, String>>,
+
+    #[serde(default)]
+    pub world_source: Option<String>,
 }
 
 impl PaperstrapConfig {
@@ -153,9 +156,8 @@ impl PaperstrapConfig {
         Ok(())
     }
 
-    fn symlink_dir(&self, name: &str) -> io::Result<()> {
+    fn symlink_dir(&self, actual_path: &str, name: &str) -> io::Result<()> {
         let symlink_path = self.build_path.join(name);
-        let actual_path = std::env::current_dir().unwrap().join(name);
 
         print!("symlinking {}... ", name);
         _ = io::stdout().flush();
@@ -180,11 +182,14 @@ impl PaperstrapConfig {
     }
 
     fn symlink_world(&self) -> io::Result<()> {
-        self.symlink_dir("world")
+        self.symlink_dir(
+            self.world_source.as_ref().unwrap_or(&"world".into()),
+            "world",
+        )
     }
 
     fn symlink_plugins(&self) -> io::Result<()> {
-        self.symlink_dir("plugins")
+        self.symlink_dir("plugins", "plugins")
     }
 
     fn add_plugins_configs(&self) -> io::Result<()> {
