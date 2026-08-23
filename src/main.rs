@@ -1,7 +1,7 @@
 use pico_args::Arguments;
 use std::{fs, io};
 
-use paperstrap::{config::PaperstrapConfig, util};
+use paperstrap::{config::PaperstrapConfig, manpages, util};
 
 fn init_project() -> Result<(), io::Error> {
     if !util::is_dir_empty_excluding_dotfiles(std::env::current_dir()?)? {
@@ -31,11 +31,50 @@ fn read_config() -> Result<PaperstrapConfig, Box<dyn std::error::Error>> {
     Ok(PaperstrapConfig::compile_config(&config)?)
 }
 
+fn help() {
+    println!(
+        r#"paperstrap - declaratively create PaperMC minecraft servers
+
+actions:
++ init                             initialize a project in the current directory
+
++ build                            builds the server project
+
++ download-plugins                 downloads plugins for the server
+    options:
+    + --missing                    download only missing plugins
+
+    list of plugins can be provided:
+    $ paperstrap download-plugins vault
+    ... and be combined with --missing
+    $ paperstrap download-plugins --missing vault coreprotect
+
++ man                              show manual pages"#
+    );
+    for manpage in manpages::MANPAGES.iter() {
+        println!("    + {:<28} {}", manpage.name, manpage.description);
+    }
+}
+
+fn man(name: &str) {
+    for manpage in manpages::MANPAGES.iter() {
+        if name == manpage.name {
+            println!("{}", manpage.description);
+            println!("{}", manpage.text.trim_start().trim_end());
+            return;
+        }
+    }
+    println!("no such manpage: {}", name);
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut args = Arguments::from_env();
     let command: String = args.free_from_str()?;
 
     match command.as_str() {
+        "init" => {
+            init_project()?;
+        }
         "build" => {
             read_config()?.build()?;
         }
@@ -50,12 +89,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             read_config()?.download_plugins(only_missing, &plugins)?;
         }
-        "init" => {
-            init_project()?;
+        "man" => {
+            let name: String = args.free_from_str()?;
+            man(&name);
         }
-        action => {
-            println!("invalid action: {}", action);
-            println!("valid actions are: build | download-plugins | init");
+        _ => {
+            help();
         }
     }
 

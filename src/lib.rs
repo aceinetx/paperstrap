@@ -10,3 +10,5 @@ pub use server_properties::*;
 
 mod paper_global_config;
 pub use paper_global_config::*;
+
+pub mod manpages;
