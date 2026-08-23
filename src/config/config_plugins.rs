@@ -84,7 +84,11 @@ impl PaperstrapConfig {
         util::download(url, &path)
     }
 
-    pub fn download_plugins(&self) -> Result<(), DownloadPluginsError> {
+    pub fn download_plugins(
+        &self,
+        only_missing: bool,
+        list: &[String],
+    ) -> Result<(), DownloadPluginsError> {
         for (name, config) in self.plugins.iter() {
             let source = match config.get("source") {
                 Some(v) => v,
@@ -93,7 +97,19 @@ impl PaperstrapConfig {
                 }
             };
 
-            println!("installing plugin {name}...");
+            let path = self.get_plugin_path_from_name(name);
+
+            print!("installing plugin {name}... ");
+            if fs::exists(path)? && only_missing {
+                println!("skipped (already exists)");
+                continue;
+            }
+
+            if !list.contains(name) && !list.is_empty() {
+                println!("isn't in list");
+                continue;
+            }
+
             match source.as_str() {
                 "modrinth" => {
                     self.download_modrinth_plugin(name, config)?;
@@ -108,6 +124,8 @@ impl PaperstrapConfig {
                     return Err(DownloadPluginsError::UnknownSource(other.to_string()));
                 }
             }
+
+            println!("ok");
         }
         Ok(())
     }

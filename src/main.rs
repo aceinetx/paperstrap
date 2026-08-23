@@ -1,3 +1,4 @@
+use pico_args::Arguments;
 use std::{fs, io};
 
 use paperstrap::{config::PaperstrapConfig, util};
@@ -19,64 +20,44 @@ fn init_project() -> Result<(), io::Error> {
         include_bytes!("../assets/project-editorconfig"),
     )?;
 
+    println!("Initialized project in current directory");
+
     Ok(())
 }
 
-fn read_config() -> Option<PaperstrapConfig> {
-    let config = match fs::read_to_string("paperstrap.ncl") {
-        Ok(text) => text,
-        Err(e) => {
-            println!("failed to read config: {}", e);
-            return None;
-        }
-    };
+fn read_config() -> Result<PaperstrapConfig, Box<dyn std::error::Error>> {
+    let config = fs::read_to_string("paperstrap.ncl")?;
 
-    match PaperstrapConfig::compile_config(&config) {
-        Ok(v) => Some(v),
-        Err(e) => {
-            println!("failed to compile config: {:?}", e);
-            None
-        }
-    }
+    Ok(PaperstrapConfig::compile_config(&config)?)
 }
 
-enum Action {
-    Build,
-    DownloadPlugins,
-    Init,
-}
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut args = Arguments::from_env();
+    let command: String = args.free_from_str()?;
 
-fn main() {
-    let args = std::env::args().collect::<Vec<String>>();
+    match command.as_str() {
+        "build" => {
+            read_config()?.build()?;
+        }
+        "download-plugins" => {
+            let only_missing = args.contains("--missing");
 
-    let action = match args.get(1).map(|f| f.as_str()) {
-        None => Action::Build,
-        Some("build") => Action::Build,
-        Some("download-plugins") => Action::DownloadPlugins,
-        Some("init") => Action::Init,
-        Some(action) => {
+            let plugins: Vec<String> = args
+                .finish()
+                .into_iter()
+                .map(|arg| arg.to_string_lossy().into_owned())
+                .collect();
+
+            read_config()?.download_plugins(only_missing, &plugins)?;
+        }
+        "init" => {
+            init_project()?;
+        }
+        action => {
             println!("invalid action: {}", action);
             println!("valid actions are: build | download-plugins | init");
-            return;
         }
-    };
-
-    match action {
-        Action::Build => {
-            match read_config().unwrap().build() {
-                Ok(_) => println!("server built in build/"),
-                Err(e) => println!("error building the server: {}", e),
-            };
-        }
-        Action::DownloadPlugins => {
-            match read_config().unwrap().download_plugins() {
-                Ok(_) => println!("all plugins downloaded"),
-                Err(e) => println!("error downloading plugins: {}", e),
-            };
-        }
-        Action::Init => match init_project() {
-            Ok(_) => println!("initialized a project in the current directory"),
-            Err(e) => println!("failed to initialize a project: {}", e),
-        },
     }
+
+    Ok(())
 }

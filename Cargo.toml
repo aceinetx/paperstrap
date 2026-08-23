@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 hex = "0.4.3"
 nickel-lang = "2.2.0"
+pico-args = "0.5.0"
 reqwest = { version = "0.13.4", features = ["blocking"] }
 serde = "1.0.229"
 serde_json = "1.0.151"

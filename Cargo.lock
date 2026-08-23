@@ -1244,6 +1244,7 @@ version = "0.1.0"
 dependencies = [
  "hex",
  "nickel-lang",
+ "pico-args",
  "reqwest",
  "serde",
  "serde_json",
