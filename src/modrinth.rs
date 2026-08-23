@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use thiserror::Error;
 
 #[derive(Deserialize, Debug)]
 pub struct VersionFileMeta {
@@ -15,14 +16,30 @@ pub struct VersionMeta {
     pub files: Vec<VersionFileMeta>,
 }
 
-pub fn fetch_plugin(name: &str) -> Result<Vec<VersionMeta>, String> {
-    let url = format!("https://api.modrinth.com/v2/project/{name}/version");
-    let response = reqwest::blocking::get(url).map_err(|e| e.to_string())?;
-    let text = response.text().map_err(|e| e.to_string())?;
+#[derive(Debug, Error)]
+pub enum FetchPluginError {
+    #[error("request error: {0}")]
+    Request(#[from] reqwest::Error),
+    #[error("deserialize error: {0}")]
+    Deserialize(#[from] serde_json::Error),
+}
 
-    let meta: Vec<VersionMeta> = serde_json::from_str(&text).map_err(|e| e.to_string())?;
+pub fn fetch_plugin(name: &str) -> Result<Vec<VersionMeta>, FetchPluginError> {
+    let url = format!("https://api.modrinth.com/v2/project/{name}/version");
+    let response = reqwest::blocking::get(url)?;
+    let text = response.text()?;
+
+    let meta: Vec<VersionMeta> = serde_json::from_str(&text)?;
 
     Ok(meta)
+}
+
+#[derive(Debug, Error)]
+pub enum FindMatchingVersionError {
+    #[error("no version found")]
+    NoVersionFound(),
+    #[error("invalid channel: {0}, valid values are: release, beta, alpha")]
+    InvalidChannel(String),
 }
 
 pub fn find_matching_version<'a>(
@@ -30,10 +47,10 @@ pub fn find_matching_version<'a>(
     version: Option<&str>,
     game_version: &str,
     version_type: &str,
-) -> Result<&'a VersionMeta, String> {
+) -> Result<&'a VersionMeta, FindMatchingVersionError> {
     if !["release", "beta", "alpha"].contains(&version_type) {
-        return Err(format!(
-            "invalid version type: {version_type}, valid types are: release, beta, alpha"
+        return Err(FindMatchingVersionError::InvalidChannel(
+            version_type.to_string(),
         ));
     }
 
@@ -66,5 +83,6 @@ pub fn find_matching_version<'a>(
 
         return Ok(meta);
     }
-    Err("no version found".into())
+
+    Err(FindMatchingVersionError::NoVersionFound())
 }

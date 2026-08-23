@@ -1,8 +1,9 @@
 pub mod modrinth;
+
+#[macro_use]
 pub mod util;
 
-mod config;
-pub use config::*;
+pub mod config;
 
 mod server_properties;
 pub use server_properties::*;

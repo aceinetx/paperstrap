@@ -1,6 +1,6 @@
 use std::{fs, io};
 
-use paperstrap::{PaperstrapConfig, util};
+use paperstrap::{config::PaperstrapConfig, util};
 
 fn init_project() -> Result<(), io::Error> {
     if !util::is_dir_empty_excluding_dotfiles(std::env::current_dir()?)? {
@@ -31,12 +31,13 @@ fn read_config() -> Option<PaperstrapConfig> {
         }
     };
 
-    let Some(cfg) = PaperstrapConfig::compile_config(&config) else {
-        println!("failed to compile config");
-        return None;
-    };
-
-    Some(cfg)
+    match PaperstrapConfig::compile_config(&config) {
+        Ok(v) => Some(v),
+        Err(e) => {
+            println!("failed to compile config: {:?}", e);
+            None
+        }
+    }
 }
 
 enum Action {

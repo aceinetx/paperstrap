@@ -1,13 +1,28 @@
 use sha2::{Digest, Sha256};
-use std::error::Error;
 use std::path::Path;
 use std::{fs, fs::File};
 use std::{
     io,
     io::{BufReader, Read, Write, copy},
 };
+use thiserror::Error;
 
-pub fn download(url: &str, destination: &Path) -> Result<(), Box<dyn Error>> {
+#[macro_export]
+macro_rules! strerr {
+    ($x: expr) => {
+        $x.map_err(|e| e.to_string())
+    };
+}
+
+#[derive(Error, Debug)]
+pub enum DownloadError {
+    #[error("request error: {0}")]
+    Request(#[from] reqwest::Error),
+    #[error("io error: {0}")]
+    Io(#[from] io::Error),
+}
+
+pub fn download(url: &str, destination: &Path) -> Result<(), DownloadError> {
     println!("downloading {} -> {}...", url, destination.display());
 
     let mut response = reqwest::blocking::get(url)?;
@@ -19,7 +34,7 @@ pub fn download(url: &str, destination: &Path) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-pub fn hash_file_sha256<P: AsRef<Path>>(path: P) -> Result<String, Box<dyn Error>> {
+pub fn hash_file_sha256<P: AsRef<Path>>(path: P) -> io::Result<String> {
     // Open the file in read-only mode.
     let file = File::open(path)?;
     let mut reader = BufReader::new(file);
