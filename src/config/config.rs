@@ -1,4 +1,4 @@
-use crate::config::DownloadPaperError;
+use crate::config::{DownloadPaperError, DownloadPluginsError};
 use crate::{PaperGlobalConfig, ServerProperties, util};
 use nickel_lang::Context;
 use serde::Deserialize;
@@ -32,6 +32,8 @@ pub enum BuildError {
     Io(#[from] io::Error),
     #[error("download paper error: {0}")]
     DownloadPaper(#[from] DownloadPaperError),
+    #[error("download plugins error: {0}")]
+    DownloadPlugins(#[from] DownloadPluginsError),
 }
 
 #[derive(Deserialize, Debug)]
@@ -254,7 +256,7 @@ impl PaperstrapConfig {
         Ok(())
     }
 
-    pub fn build(&mut self) -> Result<(), BuildError> {
+    pub fn build(&mut self, download_missing_plugins: bool) -> Result<(), BuildError> {
         self.initialize()?;
         self.download_paper()?;
         self.add_startup_scripts()?;
@@ -264,6 +266,9 @@ impl PaperstrapConfig {
         self.symlink_world()?;
         self.symlink_plugins()?;
         self.add_custom_symlinks()?;
+        if download_missing_plugins {
+            self.download_plugins(true, &[])?;
+        }
         Ok(())
     }
 }

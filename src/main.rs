@@ -39,10 +39,13 @@ actions:
 + init                             initialize a project in the current directory
 
 + build                            builds the server project
+    options:
+    + --no-download-plugins        don't download missing plugins
 
 + run                              runs the server
     options:
     + --no-build                   don't build the server project before running
+    + --no-download-plugins        don't download missing plugins (only takes effect without --no-build)
 
 + download-plugins                 downloads plugins for the server
     options:
@@ -86,7 +89,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             init_project()?;
         }
         "build" => {
-            read_config()?.build()?;
+            let no_download_plugins = args.contains("--no-download-plugins");
+
+            read_config()?.build(!no_download_plugins)?;
         }
         "download-plugins" => {
             let only_missing = args.contains("--missing");
@@ -117,7 +122,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
             let no_build = args.contains("--no-build");
             if !no_build {
-                cfg.build()?;
+                let no_download_plugins = args.contains("--no-download-plugins");
+                cfg.build(!no_download_plugins)?;
             }
 
             let mut command = Command::new("java");
