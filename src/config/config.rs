@@ -44,9 +44,6 @@ pub struct PaperstrapConfig {
     pub plugins: HashMap<String, HashMap<String, String>>,
 
     #[serde(default)]
-    pub plugins_configs: HashMap<String, HashMap<PathBuf, String>>,
-
-    #[serde(default)]
     pub world_source: Option<String>,
 
     #[serde(default)]
@@ -199,24 +196,6 @@ impl PaperstrapConfig {
         self.symlink_dir("plugins", "plugins")
     }
 
-    fn add_plugins_configs(&self) -> io::Result<()> {
-        for (plugin, files) in self.plugins_configs.iter() {
-            println!("adding config files for {plugin}...");
-            let dir_path = self.build_path.join("plugins").join(plugin);
-            _ = fs::create_dir(&dir_path);
-            for (filename, contents) in files.iter() {
-                println!("\t{}...", filename.display());
-                let path = std::path::absolute(dir_path.join(filename))?;
-
-                if path.starts_with(&self.build_path) {
-                    fs::write(path, contents)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-
     fn add_custom_symlinks(&self) -> io::Result<()> {
         println!("adding custom symlinks...");
         for (from, to) in self.symlink_files.iter() {
@@ -263,7 +242,6 @@ impl PaperstrapConfig {
         self.add_paper_global_config()?;
         self.symlink_world()?;
         self.symlink_plugins()?;
-        self.add_plugins_configs()?;
         self.add_custom_symlinks()?;
         Ok(())
     }
