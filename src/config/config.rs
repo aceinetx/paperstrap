@@ -2,10 +2,11 @@ use crate::config::DownloadPaperError;
 use crate::{PaperGlobalConfig, ServerProperties, util};
 use nickel_lang::Context;
 use serde::Deserialize;
+use soft_canonicalize::soft_canonicalize;
 use std::collections::HashMap;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::{io, io::Write};
 use thiserror::Error;
 
@@ -196,17 +197,36 @@ impl PaperstrapConfig {
         self.symlink_dir("plugins", "plugins")
     }
 
-    fn add_custom_symlinks(&self) -> io::Result<()> {
+    fn add_custom_symlinks(&mut self) -> io::Result<()> {
         println!("adding custom symlinks...");
+
+        fn expand_paths(
+            build_path: &Path,
+            paths: &HashMap<PathBuf, PathBuf>,
+        ) -> io::Result<HashMap<PathBuf, PathBuf>> {
+            let mut new_paths = HashMap::new();
+            for (from, to) in paths.iter() {
+                // `from` must exist, use fs::canonicalize
+                let from = fs::canonicalize(std::path::absolute(from)?)?;
+                let to = std::path::absolute(build_path.join(to))?;
+                // `to` may not exist, use soft_canonicalize::soft_canonicalize
+                let to = soft_canonicalize(std::path::absolute(to)?)?;
+                if !to.starts_with(&build_path) {
+                    eprintln!("\t{} is outside the build directory!", to.display());
+                    continue;
+                }
+
+                new_paths.insert(from, to);
+            }
+            Ok(new_paths)
+        }
+
+        self.symlink_files = expand_paths(&self.build_path, &self.symlink_files)?;
+        self.symlink_dirs = expand_paths(&self.build_path, &self.symlink_dirs)?;
+
         for (from, to) in self.symlink_files.iter() {
             print!("\t- {} -> {}... ", from.display(), to.display());
-
-            let from = std::path::absolute(from)?;
-            let to = std::path::absolute(self.build_path.join(to))?;
-
-            if !to.starts_with(&self.build_path) {
-                continue;
-            }
+            _ = io::stdout().flush();
 
             match symlink::symlink_file(from, to) {
                 Ok(_) => println!("ok"),
@@ -216,13 +236,7 @@ impl PaperstrapConfig {
 
         for (from, to) in self.symlink_dirs.iter() {
             print!("\td {} -> {}... ", from.display(), to.display());
-
-            let from = std::path::absolute(from)?;
-            let to = std::path::absolute(self.build_path.join(to))?;
-
-            if !to.starts_with(&self.build_path) {
-                continue;
-            }
+            _ = io::stdout().flush();
 
             match symlink::symlink_dir(from, to) {
                 Ok(_) => println!("ok"),
@@ -233,7 +247,7 @@ impl PaperstrapConfig {
         Ok(())
     }
 
-    pub fn build(&self) -> Result<(), BuildError> {
+    pub fn build(&mut self) -> Result<(), BuildError> {
         self.initialize()?;
         self.download_paper()?;
         self.add_startup_scripts()?;
