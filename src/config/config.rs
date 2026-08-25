@@ -2,7 +2,6 @@ use crate::config::{DownloadPaperError, DownloadPluginsError};
 use crate::{PaperGlobalConfig, ServerProperties, util};
 use nickel_lang::Context;
 use serde::Deserialize;
-use soft_canonicalize::soft_canonicalize;
 use std::collections::HashMap;
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -217,9 +216,8 @@ impl PaperstrapConfig {
             for (from, to) in paths.iter() {
                 // `from` must exist, use fs::canonicalize
                 let from = fs::canonicalize(std::path::absolute(from)?)?;
-                let to = std::path::absolute(build_path.join(to))?;
                 // `to` may not exist, use soft_canonicalize::soft_canonicalize
-                let to = soft_canonicalize(std::path::absolute(to)?)?;
+                let to = util::expand_path_traversal(&build_path.join(to));
                 if !to.starts_with(&build_path) {
                     eprintln!("\t{} is outside the build directory!", to.display());
                     continue;

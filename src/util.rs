@@ -1,5 +1,6 @@
 use sha2::{Digest, Sha256};
 use std::path::Path;
+use std::path::PathBuf;
 use std::{fs, fs::File};
 use std::{
     io,
@@ -82,4 +83,17 @@ pub fn is_dir_empty_excluding_dotfiles(path: impl AsRef<Path>) -> io::Result<boo
     }
 
     Ok(true)
+}
+
+pub fn expand_path_traversal(path: &Path) -> PathBuf {
+    let mut new_path = PathBuf::new();
+    for i in path.iter() {
+        if i == ".." {
+            new_path.pop();
+        } else if i == "." {
+        } else {
+            new_path.push(i);
+        }
+    }
+    new_path
 }
