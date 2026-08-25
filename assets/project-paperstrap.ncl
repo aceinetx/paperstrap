@@ -3,6 +3,8 @@ let rec cfg = {
   version = "26.2",
   build = 112,
   hash = "bd3a58cf96874e5ea6643f5f6fe9b4f5bf9e34b795fa078c2f0ee8b98b2f907e",
+  java_args = ["-Xmx2048m"],
+  paper_args = ["-nogui"],
   server_properties = {
     online_mode = false,
   },

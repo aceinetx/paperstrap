@@ -1,10 +1,10 @@
 use pico_args::Arguments;
-use std::{fs, io};
+use std::{env, fs, io, process::Command};
 
 use paperstrap::{config::PaperstrapConfig, manpages, util};
 
 fn init_project() -> Result<(), io::Error> {
-    if !util::is_dir_empty_excluding_dotfiles(std::env::current_dir()?)? {
+    if !util::is_dir_empty_excluding_dotfiles(env::current_dir()?)? {
         let ans = util::get_input("The current directory is not empty, are you sure you want to create a project here? [Y/n] ").to_lowercase();
         let confirmed = matches!(ans.as_str(), "" | "y" | "yes");
         assert!(confirmed);
@@ -39,6 +39,10 @@ actions:
 + init                             initialize a project in the current directory
 
 + build                            builds the server project
+
++ run                              runs the server
+    options:
+    + --no-build                   don't build the server project before running
 
 + download-plugins                 downloads plugins for the server
     options:
@@ -98,6 +102,42 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         "man" => {
             let name: String = args.free_from_str()?;
             man(&name);
+        }
+        "run" => {
+            let mut cfg = read_config()?;
+
+            // setup environment for nix
+            if let Ok(nix_ld_paths) = env::var("NIX_LD_LIBRARY_PATH") {
+                let ld_library_path = env::var("LD_LIBRARY_PATH").unwrap_or_default();
+                unsafe {
+                    // SAFETY: single threaded
+                    env::set_var("LD_LIBRARY_PATH", nix_ld_paths + ":" + &ld_library_path);
+                }
+            }
+
+            let no_build = args.contains("--no-build");
+            if !no_build {
+                cfg.build()?;
+            }
+
+            let mut command = Command::new("java");
+            command.args(cfg.java_args);
+            command.arg("-jar");
+            command.arg("paper.jar");
+            command.args(cfg.paper_args);
+
+            println!(
+                "running command: {} {:?}",
+                command.get_program().display(),
+                command.get_args()
+            );
+
+            env::set_current_dir(cfg.build_path)?;
+
+            let status = command.spawn()?.wait()?;
+            if !status.success() {
+                eprintln!("server closed with an error");
+            }
         }
         _ => {
             help();

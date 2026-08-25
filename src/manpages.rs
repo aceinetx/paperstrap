@@ -145,4 +145,22 @@ directories provided by this record would be symlinked relative to the build dir
 would create a symlink "build/b" that points to "a"
 "#,
     },
+    Manpage {
+        name: "attr-java_args",
+        description: "java_args optional config attribute",
+        text: r#"(Array String)
+add custom java virtual machine arguments used by `run` subcommand
+
+arguments in this attribute would be passed to the java command before "-jar" argument
+"#,
+    },
+    Manpage {
+        name: "attr-paper_args",
+        description: "paper_args optional config attribute",
+        text: r#"(Array String)
+add custom paper server arguments used by `run` subcommand
+
+arguments in this attribute would be passed to the java command after "-jar" argument
+"#,
+    },
 ];

@@ -40,6 +40,13 @@ pub struct PaperstrapConfig {
     pub version: String,
     pub build: usize,
     pub hash: String,
+
+    #[serde(default)]
+    pub java_args: Vec<String>,
+
+    #[serde(default)]
+    pub paper_args: Vec<String>,
+
     pub server_properties: ServerProperties,
     pub paper_global_config: PaperGlobalConfig,
     pub plugins: HashMap<String, HashMap<String, String>>,
